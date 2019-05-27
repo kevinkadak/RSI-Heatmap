@@ -9,11 +9,8 @@ import numpy as np
 import statistics
 import datetime
 
-#Visualize data
-import seaborn as sns
-import matplotlib.pyplot as plt
-pd.plotting.register_matplotlib_converters(explicit=True)
 
+#Connect to DB
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "S&P-500-Stock-Data-(2013-2018).db")
 try:
@@ -23,45 +20,45 @@ except Error as e:
     print(e)
 
 
-def get_tickets():
+def get_tickers():
     """
-    Loop through all the unique tickets and gather them in a name.
+    Loop through all the unique tickers and gather them in a name.
     """
 
     c.execute('SELECT DISTINCT Name FROM "S&P-500"')
     names = c.fetchall()
 
-    tickets = []
+    tickers = []
     for name in names:
-        if name not in tickets:
-            tickets.append(name[0])
+        if name not in tickers:
+            tickers.append(name[0])
 
-    return tickets
+    return tickers
 
 
-def calculate_RSI(ticket):
+def calculate_RSI(ticker):
     """
     Pull date, closing prices, and volume values from S&P-500 database to return a dataframe containing the
     items, as well as the calculated 14-day RSI.
     """
 
     #Data pull
-    query = (('SELECT Date, Close, Volume FROM "S&P-500" WHERE Name = "{}"').format(ticket))
+    query = (('SELECT Date, Close, Volume FROM "S&P-500" WHERE Name = "{}"').format(ticker))
     c.execute(query)
 
     items = c.fetchall()
 
-    ticket_dates = [date[0] for date in items] #ticket datetime
-    ticket_prices = [price[1] for price in items] #ticket closing price
-    ticket_volumes = [volume[2] for volume in items] #volume of trades for a given ticket
+    ticker_dates = [date[0] for date in items] #ticker datetime
+    ticker_prices = [price[1] for price in items] #ticker closing price
+    ticker_volumes = [volume[2] for volume in items] #volume of trades for a given ticker
 
-    df = pd.DataFrame(np.column_stack([ticket_dates, ticket_prices, ticket_volumes]), columns=['Dates', 'Prices', 'Volumes'])
+    df = pd.DataFrame(np.column_stack([ticker_dates, ticker_prices, ticker_volumes]), columns=['Dates', 'Prices', 'Volumes'])
     df["Dates"] = pd.to_datetime(df["Dates"])
     df["Prices"] = pd.to_numeric(df["Prices"])
     df["Volumes"] = pd.to_numeric(df["Volumes"])
 
     #Price change
-    price_change = [round(next - current, 4) for current,next in zip(ticket_prices,ticket_prices[1:])] #For each iteration, subtract the current price from the next in the list.  For each difference calculated, round the value to the 4th decimal place
+    price_change = [round(next - current, 4) for current,next in zip(ticker_prices,ticker_prices[1:])] #For each iteration, subtract the current price from the next in the list.  For each difference calculated, round the value to the 4th decimal place
 
     #Up & Down movement
     UpChange = []
@@ -106,8 +103,16 @@ def calculate_RSI(ticket):
         final_value = 100 - (100/(RS + 1))
         RSI.append(round(final_value,4))
 
-    df['RSI'] = pd.Series(RSI)
+    """
+    Use this portion of the code to ensure the RSI Series concatonates from the 14th element down, and not at the top of the column.
+    """
+    RSI = pd.Series(RSI)
 
+    size_diff = df.shape[0] - RSI.shape[0]
+    RSI.index = df.index[size_diff:]
+    df = pd.concat((df, RSI.rename('RSI')), axis=1)
+
+    #Oversold & Overbought indexer
     oversold = []
     overbought = []
 

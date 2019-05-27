@@ -1,35 +1,35 @@
+from datetime import datetime
+
 #Visualisation imports
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+pd.plotting.register_matplotlib_converters(explicit=True)
 sns.set_style('darkgrid')
 
 #DB_Query functions
-from DB_Query import get_tickets, calculate_RSI
+from DB_Query import get_tickers, calculate_RSI
 
-stock = "NVDA"
+stock = "AAPL"
 
-stock_tickets = get_tickets()
+stock_tickers = get_tickers()
 df = calculate_RSI(stock)
+
+print (df)
 
 #sns.heatmap([df.RSI, df.Volumes], annot=True)
 #sns.lmplot(x = df.Volumes, y = df.Prices, data = df)
 #plt.show()
 
-print (df)
+def RSI_linegraph(df):
+    linegraph = sns.lineplot(x = df.Dates, y = df.RSI)
+    linegraph.axhline(70, ls='--')
+    linegraph.axhline(30, ls='--')
+    plt.show()
 
-#Plotting the total volume being traded over time
-#dataframe['Volumes'].plot(legend=True,figsize=(12,5))
+def RSI_heatmap(df):
+    #ax = sns.heatmap([x = df.Prices, y = df.Volumes, df.RSI])
+    plt.show()
 
-
-#print (oversold)
-
-'''
-plt.figure(figsize=(9,9))
-pivot_table = phase_1_2.pivot('helix1 phase', 'helix 2 phase','Energy')
-plt.xlabel('helix 2 phase', size = 15)
-plt.ylabel('helix1 phase', size = 15)
-plt.title('Energy from Helix Phase Angles', size = 15)
-sns.heatmap(pivot_table, annot=True, fmt=".1f", linewidths=.5, square = True, cmap = 'Blues_r');
-
-'''
+RSI_heatmap(df)
