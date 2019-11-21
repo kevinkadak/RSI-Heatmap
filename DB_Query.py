@@ -7,7 +7,7 @@ import os.path
 import pandas as pd
 import numpy as np
 import statistics
-import datetime
+import datetime as datetime
 
 
 #Connect to DB
@@ -43,8 +43,8 @@ def calculate_RSI(ticker):
     """
 
     #Data pull
-    query = (('SELECT Date, Close, Volume FROM "S&P-500" WHERE Name = "{}"').format(ticker))
-    c.execute(query)
+    pull_query = (('SELECT Date, Close, Volume FROM "S&P-500" WHERE Name = "{}"').format(ticker))
+    c.execute(pull_query)
 
     items = c.fetchall()
 
@@ -52,10 +52,11 @@ def calculate_RSI(ticker):
     ticker_prices = [price[1] for price in items] #ticker closing price
     ticker_volumes = [volume[2] for volume in items] #volume of trades for a given ticker
 
-    df = pd.DataFrame(np.column_stack([ticker_dates, ticker_prices, ticker_volumes]), columns=['Dates', 'Prices', 'Volumes'])
-    df["Dates"] = pd.to_datetime(df["Dates"])
-    df["Prices"] = pd.to_numeric(df["Prices"])
-    df["Volumes"] = pd.to_numeric(df["Volumes"])
+    df = pd.DataFrame(np.column_stack([ticker_dates, ticker_prices, ticker_volumes]), columns = ['Date', 'Price', 'Volume'])
+    df["Date"] = pd.to_datetime(df["Date"])#, format = '%Y-%m-%d')
+    #df = df.set_index('Date')
+    df["Price"] = pd.to_numeric(df["Price"])
+    df["Volume"] = pd.to_numeric(df["Volume"])
 
     #Price change
     price_change = [round(next - current, 4) for current,next in zip(ticker_prices,ticker_prices[1:])] #For each iteration, subtract the current price from the next in the list.  For each difference calculated, round the value to the 4th decimal place
@@ -112,25 +113,29 @@ def calculate_RSI(ticker):
     RSI.index = df.index[size_diff:]
     df = pd.concat((df, RSI.rename('RSI')), axis=1)
 
-    #Oversold & Overbought indexer
-    oversold = []
-    overbought = []
+    #RSI breach indexer
+    RSI_breach = []
 
     for score in df.RSI:
         if score > 70:
-            oversold.append(0)
-            overbought.append(score - 70)
+            RSI_breach.append(score - 70)
         elif score < 30:
-            oversold.append(30 - score)
-            overbought.append(0)
+            RSI_breach.append(score - 30)
         elif pd.isnull(score) == True:
-            oversold.append(None)
-            overbought.append(None)
+            RSI_breach.append(None)
         else:
-            oversold.append(0)
-            overbought.append(0)
+            RSI_breach.append(0)
 
-    df['Oversold'] = pd.Series(oversold)
-    df['Overbought'] = pd.Series(overbought)
+    df['RSI Breach'] = pd.Series(RSI_breach)
 
     return df
+
+
+
+#def load_data(): # While there are far simpler functions to load using pandas, this approach is employed for the sake of practicing SQL syntax
+    #c.execute('IF NOT EXISTS(SELECT RSI, RSI_breach FROM "S&P-500")')
+    #c.execute(('INSERT {} INTO "S&P-500" ORRRRR INTO RSI WHERE Name = {}').format(df['RSI'], ticker)))
+    # BEGIN
+    # ALTER TABLE "S&P-500"
+    # ADD [column_name] FLOAT
+    # END'"
